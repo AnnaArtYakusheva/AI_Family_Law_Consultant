@@ -3,7 +3,7 @@ import legalChunksData from "../lib/chunks_clean.json";
 import { retrieveRelevantChunks, buildLegalContext, type RankedChunk } from "../lib/retrieval_v0";
 
 const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
+  import.meta.env.VITE_BACKEND_URL;
 
 const legalChunks: LegalChunk[] = legalChunksData as LegalChunk[];
 
