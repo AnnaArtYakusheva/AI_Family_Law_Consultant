@@ -1,114 +1,93 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { Category, LegalAnswer, RouteInfo, UserFacts, LegalChunk } from "../types";
 import legalChunksData from "../lib/chunks_clean.json";
 import { retrieveRelevantChunks, buildLegalContext, type RankedChunk } from "../lib/retrieval_v0";
 
-let aiInstance: GoogleGenAI | null = null;
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
 
-function getAI() {
-  if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is required. Please set it in the Secrets panel.");
-    }
-    aiInstance = new GoogleGenAI({ apiKey });
-  }
-  return aiInstance;
-}
-
-const modelName = "gemini-3-flash-preview";
 const legalChunks: LegalChunk[] = legalChunksData as LegalChunk[];
 
-export async function routeMessage(message: string): Promise<RouteInfo> {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents: [
-      {
-        parts: [
-          {
-            text: `Определи категорию и срочность запроса по семейному праву РФ: "${message}"`
-          }
-        ]
-      }
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          category: {
-            type: Type.STRING,
-            enum: [
-              "divorce",
-              "alimony",
-              "child_residence",
-              "child_contact",
-              "property_division",
-              "marriage_contract",
-              "paternity",
-              "urgent_safety",
-              "other"
-            ]
-          },
-          urgency: {
-            type: Type.STRING,
-            enum: ["normal", "high", "urgent"]
-          },
-          need_more_facts: { type: Type.BOOLEAN },
-          handoff_required: { type: Type.BOOLEAN },
-          handoff_reason: { type: Type.STRING, nullable: true },
-          confidence: { type: Type.NUMBER }
-        },
-        required: [
-          "category",
-          "urgency",
-          "need_more_facts",
-          "handoff_required",
-          "confidence"
-        ]
-      }
-    }
+async function callBackendLLM<T>(prompt: string): Promise<T> {
+  const response = await fetch(`${BACKEND_URL}/api/llm`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      responseFormat: "json",
+    }),
   });
 
-  return JSON.parse(response.text || "{}");
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Backend LLM request failed: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  const rawText = data.text;
+
+  if (!rawText) {
+    throw new Error("Backend LLM response does not contain text");
+  }
+
+  try {
+    return JSON.parse(rawText) as T;
+  } catch {
+    throw new Error(`Failed to parse LLM JSON response: ${rawText}`);
+  }
+}
+
+export async function routeMessage(message: string): Promise<RouteInfo> {
+  const prompt = `
+Определи категорию и срочность запроса по семейному праву РФ.
+
+Верни только JSON без markdown.
+
+Схема:
+{
+  "category": "divorce" | "alimony" | "child_residence" | "child_contact" | "property_division" | "marriage_contract" | "paternity" | "urgent_safety" | "other",
+  "urgency": "normal" | "high" | "urgent",
+  "need_more_facts": boolean,
+  "handoff_required": boolean,
+  "handoff_reason": string | null,
+  "confidence": number
+}
+
+Запрос пользователя:
+"${message}"
+`;
+
+  return callBackendLLM<RouteInfo>(prompt);
 }
 
 export async function extractFacts(message: string): Promise<UserFacts> {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents: [
-      {
-        parts: [
-          {
-            text: `Извлеки юридически значимые факты из сообщения: "${message}"`
-          }
-        ]
-      }
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          marriage_registered: { type: Type.BOOLEAN, nullable: true },
-          marriage_ended: { type: Type.BOOLEAN, nullable: true },
-          children_present: { type: Type.BOOLEAN, nullable: true },
-          children_count: { type: Type.INTEGER, nullable: true },
-          children_ages: { type: Type.STRING, nullable: true },
-          property_dispute: { type: Type.BOOLEAN, nullable: true },
-          contract_present: { type: Type.BOOLEAN, nullable: true },
-          court_in_progress: { type: Type.BOOLEAN, nullable: true },
-          violence_risk: { type: Type.BOOLEAN, nullable: true },
-          foreign_element: { type: Type.BOOLEAN, nullable: true },
-          user_goal: { type: Type.STRING, nullable: true }
-        }
-      }
-    }
-  });
+  const prompt = `
+Извлеки юридически значимые факты из сообщения по семейному праву РФ.
 
-  return JSON.parse(response.text || "{}");
+Верни только JSON без markdown.
+
+Схема:
+{
+  "marriage_registered": boolean | null,
+  "marriage_ended": boolean | null,
+  "children_present": boolean | null,
+  "children_count": number | null,
+  "children_ages": string | null,
+  "property_dispute": boolean | null,
+  "contract_present": boolean | null,
+  "court_in_progress": boolean | null,
+  "violence_risk": boolean | null,
+  "foreign_element": boolean | null,
+  "user_goal": string | null
+}
+
+Сообщение:
+"${message}"
+`;
+
+  return callBackendLLM<UserFacts>(prompt);
 }
 
 async function summarizeLegalBasis(
@@ -118,20 +97,22 @@ async function summarizeLegalBasis(
 
   const sourceItems = ranked.slice(0, 4).map((r) => ({
     article: r.chunk.article,
-    text: r.chunk.text
+    text: r.chunk.text,
   }));
 
   const prompt = `
 Ты помогаешь упростить юридические нормы для интерфейса AI-консультанта по семейному праву РФ.
 
-Ниже даны статьи закона. Для каждой статьи:
+Для каждой статьи:
 - не меняй смысл;
 - не придумывай ничего сверх текста;
 - сформулируй краткое объяснение простым русским языком;
 - максимум 1-2 предложения на статью;
 - не давай советов, только кратко объясни смысл нормы.
 
-Верни JSON-массив объектов:
+Верни только JSON-массив без markdown.
+
+Формат:
 [
   {
     "article": "Статья ...",
@@ -142,31 +123,10 @@ async function summarizeLegalBasis(
 Статьи:
 ${JSON.stringify(sourceItems, null, 2)}
 `;
-  const ai = getAI();
 
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents: [{ parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            article: { type: Type.STRING },
-            summary: { type: Type.STRING }
-          },
-          required: ["article", "summary"]
-        }
-      }
-    }
-  });
-
-  const parsed = JSON.parse(response.text || "[]") as {
-    article: string;
-    summary: string;
-  }[];
+  const parsed = await callBackendLLM<
+    { article: string; summary: string }[]
+  >(prompt);
 
   return sourceItems.map((item) => {
     const found = parsed.find((p) => p.article === item.article);
@@ -174,7 +134,7 @@ ${JSON.stringify(sourceItems, null, 2)}
     return {
       article: item.article,
       text: item.text,
-      summary: found?.summary || item.text.slice(0, 220)
+      summary: found?.summary || item.text.slice(0, 220),
     };
   });
 }
@@ -184,7 +144,6 @@ export async function generateAnswer(
   facts: UserFacts,
   route: RouteInfo
 ): Promise<LegalAnswer> {
-
   const ranked: RankedChunk[] = retrieveRelevantChunks(
     legalChunks,
     message,
@@ -193,26 +152,26 @@ export async function generateAnswer(
   );
 
   const retrievalDebug = {
-  items: ranked.map((r) => ({
-    article: r.chunk.article,
-    score: r.score
-  }))
-};
+    items: ranked.map((r) => ({
+      article: r.chunk.article,
+      score: r.score,
+    })),
+  };
 
   console.log(
-  "RAG DEBUG:",
-  ranked.map(r => ({
-    article: r.chunk.article,
-    score: r.score,
-    reasons: r.reasons
-  }))
-);
+    "RAG DEBUG:",
+    ranked.map((r) => ({
+      article: r.chunk.article,
+      score: r.score,
+      reasons: r.reasons,
+    }))
+  );
 
   const legalContext =
     ranked.length > 0
       ? buildLegalContext(ranked)
       : "Нет точных норм. Требуется уточнение фактов.";
-  
+
   const legalBasisFromRetrieval = await summarizeLegalBasis(ranked);
 
   const prompt = `
@@ -221,11 +180,11 @@ export async function generateAnswer(
 Твоя задача — дать КРАТКИЙ и ЧЕТКИЙ ответ, как юрист объясняет коллеге.
 
 СТИЛЬ:
-- короткие предложения
-- без канцелярита (не писать "осуществляется", "допускается", "в соответствии")
-- без вводных фраз
-- только суть
-- не более 3–4 предложений
+- короткие предложения;
+- без канцелярита;
+- без вводных фраз;
+- только суть;
+- не более 3–4 предложений.
 
 ФОРМАТ ОТВЕТА:
 Каждое предложение = "условие — действие".
@@ -239,9 +198,32 @@ export async function generateAnswer(
 Оспаривание — ...
 
 ОГРАНИЧЕНИЯ:
-- используй ТОЛЬКО нормы из контекста
-- не придумывай нормы
-- если норм нет — скажи, что нужно уточнение
+- используй ТОЛЬКО нормы из контекста;
+- не придумывай нормы;
+- если норм нет — скажи, что нужно уточнение.
+
+Верни только JSON без markdown.
+
+Схема:
+{
+  "category": string,
+  "summary": string,
+  "facts_used": string[],
+  "missing_facts": string[],
+  "legal_basis": [
+    {
+      "article": string,
+      "text": string
+    }
+  ],
+  "possible_actions": string[],
+  "documents_needed": string[],
+  "risk_flags": string[],
+  "urgency": string,
+  "handoff_required": boolean,
+  "handoff_reason": string | null,
+  "disclaimer": string
+}
 
 КОНТЕКСТ ЗАКОНА:
 ${legalContext}
@@ -251,65 +233,13 @@ ${legalContext}
 
 ФАКТЫ:
 ${JSON.stringify(facts, null, 2)}
-
-Сформируй ответ и верни JSON.
 `;
 
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents: [{ parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          category: { type: Type.STRING },
-          summary: { type: Type.STRING, description: "Краткий ответ 2-4 предложения без канцелярита"},
-          facts_used: { type: Type.ARRAY, items: { type: Type.STRING } },
-          missing_facts: { type: Type.ARRAY, items: { type: Type.STRING } },
-          legal_basis: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                article: { type: Type.STRING },
-                text: { type: Type.STRING }
-              }
-            }
-          },
-          possible_actions: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          documents_needed: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          risk_flags: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          urgency: { type: Type.STRING },
-          handoff_required: { type: Type.BOOLEAN },
-          handoff_reason: { type: Type.STRING, nullable: true },
-          disclaimer: { type: Type.STRING }
-        },
-        required: [
-          "category",
-          "summary",
-          "possible_actions",
-          "disclaimer"
-        ]
-      }
-    }
-  });
-
-  const parsed = JSON.parse(response.text || "{}");
+  const parsed = await callBackendLLM<LegalAnswer>(prompt);
 
   return {
     ...parsed,
     legal_basis: legalBasisFromRetrieval,
-    retrieval_debug: retrievalDebug
+    retrieval_debug: retrievalDebug,
   };
 }
