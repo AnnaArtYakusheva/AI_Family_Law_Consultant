@@ -2,13 +2,20 @@ import { Category, LegalAnswer, RouteInfo, UserFacts, LegalChunk } from "../type
 import legalChunksData from "../lib/chunks_clean.json";
 import { retrieveRelevantChunks, buildLegalContext, type RankedChunk } from "../lib/retrieval_v0";
 
-const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL;
+const API_URL =
+  import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  throw new Error("VITE_API_URL is not set");
+}
+function apiPath(path: string) {
+  return `${API_URL.replace(/\/$/, "")}${path}`;
+}
 
 const legalChunks: LegalChunk[] = legalChunksData as LegalChunk[];
 
 async function callBackendLLM<T>(prompt: string): Promise<T> {
-  const response = await fetch(`${BACKEND_URL}/api/llm`, {
+  const response = await fetch(apiPath(`/api/llm`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
