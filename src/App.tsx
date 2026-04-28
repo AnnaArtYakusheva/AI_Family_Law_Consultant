@@ -176,17 +176,17 @@ export default function App() {
               <Send size={20} />
             </button>
           </form>
-          <p className="text-[10px] text-center text-slate-400">
-            Ответы носят информационный характер •{" "}
-            <a
-              href="https://anna-art-ai.ru"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-500 hover:text-indigo-600 font-medium"
-            >
-              AnnaArt.AI Studio
-            </a>
-          </p>
+            <p className="text-[10px] text-center text-slate-400">
+              Ответы носят информационный характер •{" "}
+              <a
+                href="https://anna-art-ai.ru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-500 hover:text-indigo-600 font-medium"
+              >
+                AnnaArt.AI Studio
+              </a>
+            </p>
         </div>
       </footer>
     </div>
