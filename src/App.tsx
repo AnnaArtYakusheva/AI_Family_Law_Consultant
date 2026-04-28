@@ -176,7 +176,7 @@ export default function App() {
               <Send size={20} />
             </button>
           </form>
-          <div className="test-center space-y-1 mt-2">
+          <div className="text-center space-y-1 mt-2">
             <p className="text-xs text-slate-400">
               Ответы носят информационный характер
             </p>
