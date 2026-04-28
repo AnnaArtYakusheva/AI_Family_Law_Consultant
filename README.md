@@ -98,7 +98,7 @@ MVP (готов к демонстрации)
 
 ## ✅ DEMO
 
-👉 https://annaartyakusheva-ai-family-law-consultant-229c.twc1.net
+👉 <https://annaartyakusheva-ai-family-law-consultant-229c.twc1.net>
 
 ---
 
@@ -119,9 +119,10 @@ MVP (готов к демонстрации)
 🖥 Интерфейс
 
 ### Главный экран
+
 ![Главный экран](./screenshots/main.png)
 
 ### Ответ системы
+
 ![Ответ](./screenshots/answer1.png)
 ![Ответ](./screenshots/answer2.png)
-
