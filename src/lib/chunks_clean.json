@@ -984,7 +984,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "4cadaf9df6961d92f63af2fffe03cc72d1cb578fbf37d8ee533732fcc1a934f8",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_29_part_1",
@@ -1532,7 +1534,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "28904b6a73fa5e53035f6fe16ce4efcb3567ba00085e15409aa1ad2239675b99",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_43_part_1",
@@ -1785,7 +1789,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "ce455f6054b9fff13b35d579abd1989dffebaf076b613e072c7835313b165548",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_49",
@@ -2658,7 +2664,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "70c1a21055616400db535e56e41ab38ba7b51052708f5df622d4ad6ad859288c",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_72_part_1",
@@ -2728,7 +2736,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "76c7dfe8adaf431b4caf62ab1d454c82699ac740165543a1110e9f8dfef49b4f",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_73_part_1",
@@ -4389,7 +4399,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "ad42aac0545ee0159559af0e7256e2942d821b08b982d6e4d52c43cf3bc6cd4f",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_122_part_1",
@@ -4495,7 +4507,9 @@
     ],
     "source_pdf": "skodeksrf.pdf",
     "hash": "49876b92b53c6d19788d95131b1e1bcdc91f4b6a0beb9b4c47d9dd601ff3f3c8",
-    "quality_flags": []
+    "quality_flags": [
+      "false_article_boundary"
+    ]
   },
   {
     "chunk_id": "skrf_article_124_part_1",
@@ -6159,7 +6173,8 @@
     "source_pdf": "skodeksrf.pdf",
     "hash": "b77113bb6984dfb67ee89c6cbdd8e1a41354721418ac54c157e22292559d2c3f",
     "quality_flags": [
-      "suspicious_truncation"
+      "suspicious_truncation",
+      "false_article_boundary"
     ]
   },
   {
