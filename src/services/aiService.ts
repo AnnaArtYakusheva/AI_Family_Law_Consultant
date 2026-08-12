@@ -107,6 +107,11 @@ async function summarizeLegalBasis(
     text: r.chunk.text,
   }));
 
+  type LegalBasisSummaryItem = { article: string; summary: string };
+  type LegalBasisSummaryResponse =
+    | LegalBasisSummaryItem[]
+    | { articles?: LegalBasisSummaryItem[] };
+
   const prompt = `
 Ты помогаешь упростить юридические нормы для интерфейса AI-консультанта по семейному праву РФ.
 
@@ -117,26 +122,31 @@ async function summarizeLegalBasis(
 - максимум 1-2 предложения на статью;
 - не давай советов, только кратко объясни смысл нормы.
 
-Верни только JSON-массив без markdown.
+Верни только JSON-объект без markdown.
 
 Формат:
-[
-  {
-    "article": "Статья ...",
-    "summary": "Короткое понятное объяснение"
-  }
-]
+{
+  "articles": [
+    {
+      "article": "Статья ...",
+      "summary": "Короткое понятное объяснение"
+    }
+  ]
+}
 
 Статьи:
 ${JSON.stringify(sourceItems, null, 2)}
 `;
 
-  const parsed = await callBackendLLM<
-    { article: string; summary: string }[]
-  >(prompt);
+  const parsed = await callBackendLLM<LegalBasisSummaryResponse>(prompt);
+  const items = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.articles)
+      ? parsed.articles
+      : [];
 
   return sourceItems.map((item) => {
-    const found = parsed.find((p) => p.article === item.article);
+    const found = items.find((p) => p.article === item.article);
 
     return {
       article: item.article,
